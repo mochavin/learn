@@ -1,0 +1,181 @@
+---
+title: TLS
+description: How a browser and a server agree on secret keys in public, prove who they are, and then talk privately. The TLS 1.3 handshake, key exchange, certificates and record encryption.
+category: Networking
+tags: [security, cryptography, https, tls 1.3, tls 1.2, handshake, certificates, x25519, aes-gcm, hkdf]
+order: 1
+updated: 2026-11-25
+---
+
+<script>
+  import Handshake from './Handshake.svelte';
+  import DiffieHellman from './DiffieHellman.svelte';
+  import ChainOfTrust from './ChainOfTrust.svelte';
+  import KeySchedule from './KeySchedule.svelte';
+  import RecordLayer from './RecordLayer.svelte';
+  import Compare12 from './Compare12.svelte';
+</script>
+
+Every time you open an `https://` page, your browser and a server that have never met agree on secret keys over a network anyone can watch, check that the server is really who it claims to be, and then encrypt everything they say. That is TLS, Transport Layer Security. Step through it below, then read on for how each piece works.
+
+<Handshake />
+
+## The core idea
+
+TLS solves three problems at once, and it uses a different tool for each.
+
+- *Confidentiality*: nobody on the path can read the traffic. Solved with a *key exchange*: both sides contribute a random value and end up with the same secret, without ever sending it.
+- *Authentication*: you are talking to example.com, not an impostor. Solved with a *certificate*, which a trusted authority signed, plus a *signature* that proves the server owns the certificate's private key.
+- *Integrity*: nobody can alter, drop, replay or reorder data unnoticed. Solved with *authenticated encryption* (AEAD) on every record, and a MAC over the whole handshake.
+
+The handshake is just the choreography that puts these together. In TLS 1.3 it takes a single round trip:
+
+1. The client sends `ClientHello` with what it supports and a fresh public key.
+2. The server answers with `ServerHello` and its own fresh public key. Now both sides can compute the same secret, and everything after this point is encrypted.
+3. In the same flight, the server sends its certificate, a signature over the handshake, and a `Finished` MAC.
+4. The client checks all of that, sends its own `Finished`, and starts sending data.
+
+Each of these steps hides real depth. The sections below go through them one by one.
+
+## The handshake, message by message
+
+### ClientHello
+
+The client opens with a plaintext message listing its capabilities: cipher suites, supported key exchange groups, signature algorithms, the host name it wants (SNI) and the application protocols it speaks (ALPN). Several fields look strange because they are frozen for compatibility. `legacy_version` always says TLS 1.2, and the real version list lives in the `supported_versions` extension. Earlier attempts to bump the version number broke too many middleboxes that inspected handshakes and rejected anything unfamiliar.
+
+The important move is `key_share`. The client guesses which group the server will choose, nearly always X25519, generates an ephemeral key pair for it, and sends the public key right away. In TLS 1.2 the key exchange started only after the server had replied; guessing early is what removes a full round trip.
+
+If the guess is wrong, the server replies with a `HelloRetryRequest` naming the group it wants, and the client sends a second ClientHello with a matching share. That costs one extra round trip but is rare in practice.
+
+### ServerHello
+
+The server picks one cipher suite, one group and the version, generates its own ephemeral key pair and sends the public key. This is the last message an observer can read. From the two key shares, each side computes the shared secret and derives the *handshake traffic keys*. RFC 8446 writes messages encrypted with these keys in braces, like `{Certificate}`, and messages under the final application keys in brackets, like `[Application Data]`.
+
+### EncryptedExtensions, Certificate, CertificateVerify
+
+`EncryptedExtensions` carries any negotiated options that are not needed for the key exchange, such as the chosen ALPN protocol. `Certificate` carries the server's certificate chain. `CertificateVerify` is a signature, made with the certificate's private key, over a hash of every handshake message so far.
+
+That last message is what ties the ephemeral key exchange to the server's identity. The certificate alone proves nothing, since it is public and anyone can replay it. A signature over _this_ handshake, which includes both fresh key shares, can only come from whoever holds the private key, and only for this connection.
+
+### Finished
+
+Each side sends a `Finished` message: an HMAC over the full transcript, keyed from its handshake traffic secret. It confirms both sides saw identical messages and derived identical keys. If an attacker had altered anything, even a plaintext field in ClientHello such as the cipher suite list, the transcripts would differ and the check would fail. This is what defeats downgrade attacks, where an attacker strips the strong options so both sides settle for weak ones.
+
+After its Finished the server can already derive the application keys, and may send data before hearing back (so-called 0.5-RTT data). The client verifies the server's chain, signature and Finished, sends its own Finished and its first request in the same flight.
+
+## Key exchange: agreeing on a secret in public
+
+The puzzle at the heart of TLS: two parties who share nothing must end up with a secret that an eavesdropper who sees every byte between them cannot learn. Diffie-Hellman, published in 1976, solves it using an operation that is easy in one direction and hard to reverse.
+
+Pick a prime `p` and a generator `g`. Raising `g` to a power mod `p` is fast. Going back, finding the exponent from the result, is the *discrete logarithm problem*, and for large well-chosen groups nobody knows how to do it in reasonable time. Each side keeps a random exponent private, sends `g` raised to it, and raises what it receives to its own exponent:
+
+- The client sends `A = g^a mod p` and computes `B^a = g^(ba)`.
+- The server sends `B = g^b mod p` and computes `A^b = g^(ab)`.
+
+Both get `g^(ab)`. The eavesdropper has `g`, `p`, `A` and `B`, but combining them gives only `g^(a+b)`, not `g^(ab)`. Try it with numbers small enough to check by hand:
+
+<DiffieHellman />
+
+### From numbers to elliptic curves
+
+Modern TLS does the same thing on an elliptic curve. Instead of exponentiation mod `p`, you multiply a fixed curve point `G` by a secret number: the public key is `A = a·G`, and the shared secret is `a·B = a·b·G = b·A`. The hard problem becomes the elliptic curve discrete logarithm, which is harder per bit, so a 32-byte X25519 key gives roughly the security of a 3072-bit classic Diffie-Hellman group. X25519 (RFC 7748) is the default almost everywhere because it is fast, has no weak keys to check for, and is easy to implement in constant time.
+
+### Ephemeral keys and forward secrecy
+
+The "E" in ECDHE stands for *ephemeral*. Both key pairs are generated for one connection and deleted afterwards. That gives *forward secrecy*: if the server's long-term certificate key is stolen next year, recorded traffic from today still cannot be decrypted, because the key that protected it no longer exists anywhere.
+
+TLS 1.2 also allowed *RSA key exchange*, where the client encrypted the secret with the server's certificate key. One leaked key then decrypted every past session anyone had recorded. TLS 1.3 removed it; every full handshake is forward-secret.
+
+### Post-quantum key exchange
+
+A large quantum computer would break both finite-field and elliptic curve Diffie-Hellman. Because recorded traffic could be decrypted later ("harvest now, decrypt later"), browsers and servers have started using a *hybrid* group, X25519MLKEM768, that combines X25519 with ML-KEM, a post-quantum key encapsulation mechanism standardized as FIPS 203. The handshake shape does not change: the key share is just larger, about 1.2 KB, and the shared secret is the two results concatenated. An attacker would have to break both.
+
+## Certificates and the chain of trust
+
+The key exchange gives you a secret shared with _someone_. A certificate tells you who. An X.509 certificate is a signed statement: "the public key K belongs to example.com", signed by a certificate authority (CA). Your device ships with a list of root CAs it trusts, and validation is the job of connecting the server's certificate to one of them.
+
+<ChainOfTrust />
+
+### What the client checks
+
+For each certificate in the chain, the client verifies the issuer's signature with the issuer's public key, checks the validity dates, and checks constraints: only certificates marked `CA:TRUE` may sign other certificates, and name or path length constraints must hold. For the leaf, the host name must appear in the Subject Alternative Name extension. The chain must end at a root in the local trust store. That last step is not math; it is policy, maintained by browser and OS root programs that audit CAs and remove them when they misbehave.
+
+Intermediate CAs exist so the root's private key can stay offline in a vault. If an intermediate is compromised it can be revoked without replacing roots on billions of devices.
+
+### Proving possession
+
+Validating the chain shows the certificate is genuine, not that the server owns it. `CertificateVerify` closes that gap: it is a signature over the handshake transcript made with the leaf's private key. The signed content starts with 64 spaces and a context string, `TLS 1.3, server CertificateVerify`, so the signature cannot be mistaken for a signature in any other protocol or role.
+
+### Revocation and transparency
+
+A stolen private key outlives the problem unless the certificate can be revoked. The classic mechanisms are certificate revocation lists and OCSP, where the client asks the CA whether a certificate is still good. Asking the CA leaks which sites you visit and adds latency, so servers can *staple* a recent, CA-signed OCSP response into the handshake instead. In practice the industry is moving to short-lived certificates, 90 days or less, so a compromised certificate expires soon anyway.
+
+*Certificate Transparency* attacks the problem from another side. CAs must publish every certificate they issue to public, append-only logs, and browsers require proof of logging (signed certificate timestamps, or SCTs). A CA can no longer issue a certificate for your domain in secret; you can monitor the logs and see it.
+
+## The key schedule
+
+The shared secret from ECDHE is not used as an encryption key directly. TLS 1.3 runs it through a *key schedule* built on HKDF (RFC 5869), a key derivation function with two halves: `HKDF-Extract` condenses input key material into a uniformly random secret, and `HKDF-Expand` stretches a secret into as many independent keys as you need, each labelled with a purpose.
+
+<KeySchedule />
+
+Three design ideas show up here:
+
+- *Every key has one job.* Handshake and application keys differ, each direction has its own key, and exporters and resumption get their own secrets. A weakness in one use cannot leak another.
+- *Keys are bound to the transcript.* `Derive-Secret` mixes in a hash of the handshake messages so far. Two connections with different hellos can never end up with the same keys, and a tampered handshake produces keys the other side does not have.
+- *Stages are chained.* Each stage's secret salts the next extraction, so the master secret depends on the PSK (if any), the ECDHE secret and every step between.
+
+The labels in the diagram are the literal strings fed to HKDF, prefixed with `tls13 `. `HKDF-Expand-Label(secret, "key", "", 16)` produces an AES-128 key; the same call with `"iv"` and length 12 produces the IV.
+
+## Session encryption: the record layer
+
+After the handshake, data travels in *records*. Each record is encrypted with an AEAD cipher, authenticated encryption with associated data, which encrypts and authenticates in a single operation. TLS 1.3 allows only AEADs: AES-GCM and ChaCha20-Poly1305 in practice. The record below is sealed for real in your browser with the Web Crypto API.
+
+<RecordLayer />
+
+A few details matter more than they look:
+
+- *The nonce is never sent.* It is the IV from the key schedule XORed with a 64-bit sequence number that both sides count independently. Each record gets a unique nonce, which AES-GCM absolutely requires, and a record that is dropped, replayed or reordered decrypts under the wrong nonce and fails.
+- *The header is authenticated but not encrypted.* It goes in as the additional data, so changing the length or type in transit also breaks the tag.
+- *The real content type is inside.* Every encrypted record shows the outer type `application_data`; whether it carries data, a handshake message such as a session ticket, or an alert is hidden. Optional padding hides lengths too.
+- *Keys can be rotated.* A `KeyUpdate` message ratchets a direction's traffic secret forward with HKDF. Long-lived connections use it before they get near AES-GCM's safe limit of records per key.
+
+ChaCha20-Poly1305 does the same job as AES-GCM and is faster on devices without AES hardware instructions, which is why many phones prefer it.
+
+## Resumption and 0-RTT
+
+After a handshake, the server can send a `NewSessionTicket`. It carries an opaque ticket and a nonce from which both sides derive a pre-shared key (PSK) using the resumption master secret. On the next connection the client offers that PSK in its ClientHello. The server can then skip the certificate, which saves CPU and bytes, and usually still does a fresh ECDHE exchange alongside the PSK so the new session keeps forward secrecy.
+
+With a PSK, the client may also send *early data* in its very first flight, encrypted with the early traffic key: a request that leaves at zero round trips. The catch is that early data has weaker guarantees. It is not forward-secret with respect to the PSK, and an attacker can capture and *replay* it, because the server has not yet contributed any fresh randomness when it arrives. Servers therefore accept 0-RTT only for idempotent requests, and use replay caches or single-use tickets to limit the damage.
+
+## What changed from TLS 1.2
+
+TLS 1.3 (RFC 8446, 2018) is less a revision than a redesign. The biggest visible change is latency.
+
+<Compare12 />
+
+| | TLS 1.2 | TLS 1.3 |
+|---|---|---|
+| Full handshake | 2 round trips | 1 round trip |
+| Resumption | 1 round trip | 1, or 0 with early data |
+| Key exchange | RSA, DHE or ECDHE | ECDHE or DHE only (always forward-secret) |
+| Cipher suite names | key exchange, auth, cipher and hash together | AEAD and hash only |
+| Ciphers | CBC modes, RC4, AEADs | AEADs only |
+| Certificate | sent in plaintext | encrypted |
+| Handshake integrity | Finished covers messages; signature covers only key exchange params | signature and Finished cover the whole transcript |
+| Key derivation | custom PRF | HKDF key schedule |
+| Removed | | renegotiation, compression, ChangeCipherSpec, custom DH groups, static RSA |
+
+Much of the cleanup was a response to attacks on TLS 1.2 and earlier. Compression enabled CRIME, CBC padding enabled Lucky13 and POODLE-style padding oracles, RSA key exchange was exposed to Bleichenbacher-style oracles (ROBOT), and export-grade and custom groups enabled FREAK and Logjam. TLS 1.3 removed the features instead of patching them. Signing the entire transcript, and the downgrade marker in ServerHello.random, also close the door on tricks that downgraded connections to weaker options.
+
+## Where TLS sits
+
+TLS runs on top of a reliable byte stream, usually TCP, and below the application protocol, usually HTTP. With TCP, a new HTTPS connection costs one round trip for TCP plus one for TLS 1.3 before the first request. QUIC, the transport under HTTP/3, folds the TLS 1.3 handshake into its own first round trip and encrypts its transport headers too. It keeps the TLS handshake and key schedule but replaces the record layer with its own packet protection. DTLS is the variant for datagram transports such as UDP.
+
+## Further reading
+
+- [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446): The Transport Layer Security Protocol Version 1.3. Readable, and section 7 on the key schedule is short.
+- [RFC 5246](https://www.rfc-editor.org/rfc/rfc5246): TLS 1.2, for comparison.
+- [RFC 7748](https://www.rfc-editor.org/rfc/rfc7748): Elliptic Curves for Security (X25519).
+- [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869): HKDF.
+- [The Illustrated TLS 1.3 Connection](https://tls13.xargs.org/): every byte of a real handshake, annotated.
+- [RFC 6962](https://www.rfc-editor.org/rfc/rfc6962): Certificate Transparency.

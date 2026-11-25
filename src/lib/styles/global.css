@@ -1,0 +1,192 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 80px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-ui);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--dur-ui) var(--ease), color var(--dur-ui) var(--ease);
+}
+
+::selection {
+  background: var(--selection);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color var(--dur-ui) var(--ease), color var(--dur-ui) var(--ease);
+}
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+svg text {
+  font-family: var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Small uppercase label used for categories, kinds and section eyebrows. */
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* Shared button look: quiet, outlined. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 32px;
+  min-width: 32px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  font-size: var(--text-sm);
+  line-height: 1;
+  transition: border-color var(--dur-ui) var(--ease), background-color var(--dur-ui) var(--ease);
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn.icon {
+  padding: 0;
+}
+.btn[aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Segmented control: a row of options where one is selected. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.segmented button {
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/*
+ * Hover/tap info targets (see src/lib/info). Any element with [data-info]
+ * gets a pointer and an accent highlight while hovered, focused or pinned.
+ * Diagram primitives mark their outline with .frame and their text with .ink.
+ */
+[data-info] {
+  cursor: help;
+  outline: none;
+}
+[data-info]:focus-visible {
+  outline: none;
+}
+:where(div, span, li, td, th, button, code)[data-info] {
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--dur-ui) var(--ease), background-color var(--dur-ui) var(--ease);
+}
+:where(div, span, li, td, th, button, code)[data-info]:hover,
+:where(div, span, li, td, th, button, code)[data-info]:focus-visible,
+:where(div, span, li, td, th, button, code)[data-info].info-active {
+  box-shadow: 0 0 0 1px var(--accent-line);
+  background-color: var(--accent-soft);
+}
+svg [data-info] .frame {
+  transition: stroke var(--dur-ui) var(--ease), fill var(--dur-ui) var(--ease);
+}
+svg [data-info]:hover .frame,
+svg [data-info]:focus-visible .frame,
+svg [data-info].info-active .frame {
+  stroke: var(--accent);
+}
+svg [data-info]:hover .ink,
+svg [data-info]:focus-visible .ink,
+svg [data-info].info-active .ink {
+  fill: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

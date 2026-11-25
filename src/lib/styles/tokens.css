@@ -1,0 +1,106 @@
+/*
+ * Design tokens. DESIGN.md is the reference for how to use them.
+ * Never hard-code a color in a component: use these variables, so both themes work.
+ */
+:root {
+  /* Type */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --text-xs: 0.75rem; /* 12 - diagram labels, meta */
+  --text-sm: 0.875rem; /* 14 - UI, info cards, captions */
+  --text-md: 1rem; /* 16 - UI body */
+  --text-prose: 1.0625rem; /* 17 - long-form prose */
+  --text-lg: 1.25rem; /* 20 - h3 */
+  --text-xl: 1.625rem; /* 26 - h2 */
+  --text-2xl: 2.5rem; /* 40 - page title */
+
+  --leading-tight: 1.2;
+  --leading-ui: 1.45;
+  --leading-prose: 1.7;
+
+  /* Spacing, 4px base */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  /* Layout */
+  --gutter: 16px;
+  --w-prose: 680px;
+  --w-wide: 1080px;
+  --w-page: 1200px;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-ui: 160ms;
+  --dur-diagram: 700ms;
+
+  /* Light theme (default) */
+  --bg: #fbfbfa;
+  --surface: #f3f3f1;
+  --surface-raised: #ffffff;
+  --fg: #141414;
+  --fg-muted: #5a5a58;
+  --fg-subtle: #8c8c88;
+  --line: #e3e3df;
+  --line-strong: #c9c9c4;
+  --accent: #2f63c8;
+  --accent-fg: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 45%, transparent);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.08);
+  --selection: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f0f10;
+  --surface: #17171a;
+  --surface-raised: #1c1c20;
+  --fg: #ececea;
+  --fg-muted: #a3a3a0;
+  --fg-subtle: #6e6e6b;
+  --line: #262629;
+  --line-strong: #3a3a3e;
+  --accent: #7ea2ef;
+  --accent-fg: #0f0f10;
+  --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 50%, transparent);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* No-JS fallback: follow the system when no data-theme is set. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0f0f10;
+    --surface: #17171a;
+    --surface-raised: #1c1c20;
+    --fg: #ececea;
+    --fg-muted: #a3a3a0;
+    --fg-subtle: #6e6e6b;
+    --line: #262629;
+    --line-strong: #3a3a3e;
+    --accent: #7ea2ef;
+    --accent-fg: #0f0f10;
+  }
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 32px;
+  }
+}

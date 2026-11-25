@@ -1,0 +1,171 @@
+/*
+ * Long-form concept content (the compiled .svx). Children sit in the prose
+ * column; anything with class "wide" (every <Figure>) breaks out to the wide
+ * column. See "Layout of a concept page" in DESIGN.md.
+ */
+.prose {
+  display: grid;
+  grid-template-columns:
+    [wide-start] minmax(0, 1fr)
+    [content-start] minmax(0, var(--w-prose))
+    [content-end] minmax(0, 1fr)
+    [wide-end];
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: var(--fg);
+}
+.prose > * {
+  grid-column: content;
+  margin-top: 0;
+  margin-bottom: 1.1em;
+}
+.prose > .wide {
+  grid-column: wide;
+  margin: var(--s-6) 0 var(--s-7);
+}
+
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: var(--leading-tight);
+}
+.prose h2 {
+  font-size: var(--text-xl);
+  margin-top: var(--s-8);
+  margin-bottom: var(--s-4);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--line);
+}
+.prose h3 {
+  font-size: var(--text-lg);
+  margin-top: var(--s-6);
+  margin-bottom: var(--s-3);
+}
+.prose h4 {
+  font-size: var(--text-md);
+  margin-top: var(--s-5);
+  margin-bottom: var(--s-2);
+}
+.prose :is(h2, h3) a.anchor {
+  text-decoration: none;
+}
+
+.prose p,
+.prose li {
+  color: color-mix(in srgb, var(--fg) 88%, var(--bg));
+}
+.prose strong {
+  font-weight: 620;
+  color: var(--fg);
+}
+.prose a {
+  text-decoration-color: var(--accent-line);
+}
+.prose a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+}
+.prose li {
+  margin: 0.3em 0;
+}
+.prose li::marker {
+  color: var(--fg-subtle);
+}
+
+.prose :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.84em;
+  overflow-wrap: break-word;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.prose blockquote {
+  margin-left: 0;
+  margin-right: 0;
+  padding: var(--s-1) 0 var(--s-1) var(--s-4);
+  border-left: 2px solid var(--accent);
+  color: var(--fg-muted);
+}
+.prose blockquote p {
+  color: inherit;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: var(--s-7) 0;
+}
+
+/* Tables scroll inside themselves on narrow screens, never the page. */
+.prose table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  line-height: var(--leading-ui);
+}
+.prose th,
+.prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line);
+  min-width: 120px;
+}
+.prose th {
+  font-weight: 600;
+  color: var(--fg);
+  border-bottom-color: var(--line-strong);
+}
+
+/* Code blocks (twinkleplop tokens), monochrome with the accent for keywords. */
+.prose pre {
+  overflow-x: auto;
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.prose pre .tok.keyword,
+.prose pre .tok.storage {
+  color: var(--accent);
+}
+.prose pre .tok.string {
+  color: var(--fg);
+}
+.prose pre .tok.comment {
+  color: var(--fg-subtle);
+  font-style: italic;
+}
+.prose pre .tok.number,
+.prose pre .tok.constant {
+  color: var(--fg-muted);
+}
+.prose pre .tok.punctuation,
+.prose pre .tok.operator {
+  color: var(--fg-subtle);
+}
+
+.prose .footnotes {
+  margin-top: var(--s-7);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.prose .footnotes li,
+.prose .footnotes p {
+  color: inherit;
+}

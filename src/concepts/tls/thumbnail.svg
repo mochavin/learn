@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Two lifelines, three messages, a lock: the handshake at a glance. -->
+  <rect x="44" y="30" width="64" height="26" rx="5" stroke="currentColor" stroke-width="1.5"/>
+  <rect x="212" y="30" width="64" height="26" rx="5" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M76 56v118M244 56v118" stroke="currentColor" stroke-opacity=".4" stroke-width="1.25" stroke-dasharray="2 4"/>
+  <path d="M80 78h156M230 73l6 5-6 5" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M240 106H84M90 101l-6 5 6 5" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M80 134h156M230 129l6 5-6 5" stroke="var(--accent)" stroke-width="1.75"/>
+  <path d="M240 160H84M90 155l-6 5 6 5" stroke="var(--accent)" stroke-width="1.75"/>
+  <g transform="translate(160 147)">
+    <rect x="-13" y="-4" width="26" height="20" rx="4" fill="var(--accent)" stroke="none"/>
+    <path d="M-7 -4v-4a7 7 0 0 1 14 0v4" stroke="var(--accent)" stroke-width="2.5"/>
+  </g>
+</svg>
