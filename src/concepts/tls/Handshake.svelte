@@ -109,7 +109,7 @@
           {#if steps.index >= 8 && !compact}
             <g transition:fade={{ duration: dur(300) }} use:info={{ kind: 'Timing', title: 'One round trip', body: 'From ClientHello leaving to the client sending Finished (and its first request) is one network round trip. TLS 1.2 needed two.' }}>
               <path class="rtt" d="M{L.clientX + 8} {rowY(0)} h-4 V{rowY(8)} h4" />
-              <text class="rtt-label" x={L.clientX + 14} y={(rowY(0) + rowY(8)) / 2 - 8}>1 RTT</text>
+              <text class="rtt-label" x={L.clientX + 12} y={rowY(0) - 8}>1 RTT</text>
             </g>
           {/if}
 
